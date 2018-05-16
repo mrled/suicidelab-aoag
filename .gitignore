@@ -1,1 +1,4 @@
-bin
+bin/
+ISO/
+ServerMSUs/
+ClientMSUs/
