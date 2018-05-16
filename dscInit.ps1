@@ -23,8 +23,7 @@ $ErrorActionPreference = "Stop"
 
 $script:RepoModulesPath = Resolve-Path -LiteralPath $PSScriptRoot\Modules | Select-Object -ExpandProperty Path
 $script:RequiredDscModules = @(
-    'cChoco'
-    'xComputerManagement'
+    # 'xComputerManagement'
     'xHyper-V'
 )
 $script:Configurations = @(
@@ -137,6 +136,15 @@ function Add-PathLikeEnvironmentVariableValue {
 # (Useful during debugging)
 # If dot-sourced, the following block will not run:
 if ($MyInvocation.InvocationName -ne '.') {
+    foreach ($mod in $script:RequiredDscModules) {
+        if (-not (Get-Module -Name $mod -ListAvailable)) {
+            Write-Verbose -Message "Installing Powershell module $mod"
+            Install-Module -Name $mod
+        } else {
+            Write-Verbose -Message "Powershell module $mod is already installed"
+        }
+    }
+
     try {
         # Set the machine's PSModulePath so that when we DSC gains admin privs, it can find the modules
         # Set the process's PSModulePath because I'm cargo culting for speed

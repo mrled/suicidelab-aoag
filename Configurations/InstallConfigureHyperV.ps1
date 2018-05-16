@@ -97,3 +97,51 @@ Configuration DownloadEvalSoftware {
         }
     }
 }
+
+<#
+.PARAMETER VirtualSwitchName
+The name of an *existing* external virtual switch
+.PARAMETER ComputerName
+The computer to connect to
+.PARAMETER NamePrefix
+A prefix to apply to Hyper-V resources we create, to identify them as belonging to this lab
+#>
+Configuration CreateVms {
+    Param(
+        [Parameter(Mandatory)] [string] $VirtualSwitchName,
+        [string[]] $ComputerName = "localhost",
+        [string] $NamePrefix = "AoagLab"
+    )
+
+    Import-DscResource -ModuleName xHyper-V
+
+    $DefaultVmPath = "$env:ProgramData\Microsoft\Windows\Hyper-V"
+    $DefaultVhdPath = "$env:ProgramData\Microsoft\Windows\Hyper-V\Virtual Hard Disks"
+
+    Node $ComputerName {
+
+        xVHD "DomainControlerVhd" {
+            Ensure = 'Present'
+            Name = "$NamePrefix-DomainController.vhdx"
+            Path = $DefaultVhdPath
+            Generation = "Vhdx"
+            MaximumSizeBytes = 20GB
+        }
+
+        xVMHyperV DomainControllerVm {
+            Ensure = 'Present'
+            DependsOn = "[xVHD]DomainControllerVhd"
+            Name = "$NamePrefix-DomainController"
+            VhdPath = "$DefaultVhdPath\$NamePrefix-DomainController.vhdx"
+            SwitchName = $VirtualSwitchName
+            State = 'Running'
+            Path = $DefaultVmPath
+            Generation = 2
+            StartupMemory = 2GB
+            MinimumMemory = 512MB
+            MaximumMemory = 2GB
+            ProcessorCount = 1
+            EnableGuestService = $true
+        }
+    }
+}
