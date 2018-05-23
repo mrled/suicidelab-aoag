@@ -12,7 +12,7 @@ Configuration "$labConfigurationName" {
     Import-DscResource -Module xComputerManagement -ModuleVersion 4.1.0.0
     Import-DscResource -Module xDHCPServer -ModuleVersion 1.6.0.0
     Import-DscResource -Module xDnsServer -ModuleVersion 1.7.0.0
-    Import-DscResource -Module xNetworking -ModuleVersion 5.5.0.0
+    Import-DscResource -Module xNetworking -ModuleVersion 5.7.0.0
     Import-DscResource -Module xSmbShare -ModuleVersion 2.0.0.0
 
     node $AllNodes.Where({$true}).NodeName {
@@ -25,7 +25,6 @@ Configuration "$labConfigurationName" {
         }
 
         if (-not [System.String]::IsNullOrEmpty($node.IPAddress)) {
-
             xIPAddress 'PrimaryIPAddress' {
                 IPAddress      = $node.IPAddress
                 InterfaceAlias = $node.InterfaceAlias
@@ -168,58 +167,59 @@ Configuration "$labConfigurationName" {
 
     node $AllNodes.Where({$_.Role -in 'EDGE'}).NodeName {
 
-        # WindowsFeature AddRoutingComponent {
-        #     Ensure               = 'Present';
-        #     Name                 = 'Routing';
-        #     IncludeAllSubFeature = $true;
-        #     DependsOn            = '[xComputer]DomainMembership';
-        # }
+        WindowsFeature AddRoutingComponent {
+            Ensure               = 'Present';
+            Name                 = 'Routing';
+            IncludeAllSubFeature = $true;
+            DependsOn            = '[xComputer]DomainMembership';
+        }
 
-        # Script ConfigureRRAS {
-        #     GetScript = { return @{ Result = "" } }
-        #     TestScript = { return $false }
-        #     SetScript = {
-        #         Install-RemoteAccess -VpnType VPN
-        #         cmd.exe /c "netsh routing ip nat install"
-        #         cmd.exe /c "netsh routing ip nat add interface AOAGLAB-INTERNET"
-        #         cmd.exe /c "netsh routing ip nat set interface AOAGLAB-INTERNET mode=full"
-        #         cmd.exe /c "netsh routing ip nat add interface AOAGLAB-CORPNET-ETHERNET"
-        #     }
-        #     PsDscRunAsCredential = $Credential
-        #     DependsOn            = '[WindowsFeature]AddRoutingComponent';
-        # }
+        Script NewNetNat {
+            GetScript = { return @{ Result = "" } }
+            TestScript = {
+                try {
+                    Get-NetNat -Name NATNetwork | Out-Null
+                    return $true
+                } catch {
+                    return $false
+                }
+            }
+            SetScript = {
+                New-NetNat -Name NATNetwork -InternalIPInterfaceAddressPrefix "10.0.0.0/24"
+            }
+            PsDscRunAsCredential = $Credential
+            DependsOn            = '[WindowsFeature]AddRoutingComponent';
+        }
 
-        # xIPAddress 'SecondaryIPAddress' {
-        #     IPAddress      = $node.SecondaryIPAddress
-        #     InterfaceAlias = $node.SecondaryInterfaceAlias
-        #     AddressFamily  = $node.AddressFamily
-        #     # DependsOn            = '[Script]ConfigureRRAS';
-        #     DependsOn      = '[xComputer]DomainMembership';
-        # }
+    }
 
-        # xDnsServerAddress 'SecondaryDNSClient' {
-        #     Address        = $node.SecondaryDnsServerAddress;
-        #     InterfaceAlias = $node.SecondaryInterfaceAlias;
-        #     AddressFamily  = $node.AddressFamily
-        #     # DependsOn            = '[Script]ConfigureRRAS';
-        #     DependsOn      = '[xComputer]DomainMembership';
-        # }
-
-        # xDnsConnectionSuffix 'SecondarySuffix' {
-        #     InterfaceAlias           = $node.SecondaryInterfaceAlias;
-        #     ConnectionSpecificSuffix = $node.SecondaryDnsConnectionSuffix;
-        #     # DependsOn            = '[Script]ConfigureRRAS';
-        #     DependsOn                = '[xComputer]DomainMembership';
-        # }
-
-        # xDhcpClient 'DhcpClient' {
-        #     InterfaceAlias = $node.SecondaryInterfaceAlias
-        #     AddressFamily  = $node.AddressFamily
-        #     State           = "Enabled"
-        #     # DependsOn       = '[Script]ConfigureRRAS';
-        #     DependsOn       = '[xComputer]DomainMembership';
-        # }
-
+    node $Allnodes.Where({'Firefox' -in $_.Lability_Resource}).NodeName {
+        Script "InstallFirefox" {
+            GetScript = { return @{ Result = "" } }
+            TestScript = {
+                Test-Path -Path "C:\Program Files\Mozilla Firefox"
+            }
+            SetScript = {
+                $ffInstaller = "C:\Resources\Firefox-Latest.exe"
+                $firefoxIniFile = "${env:temp}\firefox-installer.ini"
+                $firefoxIniContents = @(
+                    "QuickLaunchShortcut=false"
+                    "DesktopShortcut=false"
+                )
+                Out-File -FilePath $firefoxIniFile -InputObject $firefoxIniContents -Encoding UTF8
+                $startProcParams = @{
+                    FilePath = $ffInstaller
+                    ArgumentList = @('/INI="{0}"' -f $firefoxIniFile)
+                    Wait = $true
+                    PassThru = $true
+                }
+                $process = Start-Process @startProcParams
+                if ($process.ExitCode -ne 0) {
+                    throw "Firefox installer at $ffInstaller exited with code $($process.ExitCode)"
+                }
+            }
+            PsDscRunAsCredential = $Credential
+        }
     }
 
     node $AllNodes.Where({$_.Role -in 'WEB'}).NodeName {

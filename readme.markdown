@@ -28,9 +28,16 @@ On my laptop with 4 cores and 32GB of RAM:
 
  -  The domain controller comes up in about 15 minutes
 
-## Problems with AutomaticCheckpointEnabled
+### Redeploying
 
-See here: https://github.com/VirtualEngine/Lability/issues/294
+ -  Delete the VMs in Hyper-V manager
+
+ -  You may also need to delete the VHDX files;
+    you can do so with this command:
+
+        do { rm C:\Lability\VMVirtualHardDisks\AOAGLAB-* -ErrorAction SilentlyContinue -Force; sleep 2} while (ls C:\Lability\VMVirtualHardDisks\AOAGLAB-*)
+
+ -  Then just redeploy as above
 
 ## Debugging tips
 
@@ -60,12 +67,15 @@ Here are some things to try:
 
 4.  Check the DSC logs in Event Viewer
 
-5.  Some links
+5.  I have had problems with AutomaticCheckpointEnabled; see
+    <https://github.com/VirtualEngine/Lability/issues/294>
 
-     -  A good general Lability guide -
-        Lability doesn't have great documentation on its own,
-        but links to this and other guides in its readme.
-        <https://blog.kilasuit.org/2016/04/13/building-a-lab-using-hyper-v-and-lability-the-end-to-end-example/>
+Finally, some links that might be helpful:
 
-     -  Notes on how DSC resources are added to Lability VMs
-        <https://github.com/VirtualEngine/Lability/issues/172>
+    -  A good general Lability guide -
+    Lability doesn't have great documentation on its own,
+    but links to this and other guides in its readme.
+    <https://blog.kilasuit.org/2016/04/13/building-a-lab-using-hyper-v-and-lability-the-end-to-end-example/>
+
+    -  Notes on how DSC resources are added to Lability VMs
+    <https://github.com/VirtualEngine/Lability/issues/172>
