@@ -1,4 +1,4 @@
-# SuicideLabs-AOAG
+# SuicideLab-AOAG
 
 A definition for a Hyper-V lab environment for configuring SQL Server AlwaysOn Availability Groups,
 built with Lability.
