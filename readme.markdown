@@ -22,6 +22,28 @@ Thereafter, you have to simply run the lab script:
 
     .\Deploy-AOAGLAB.ps1
 
+### WARNING: The EDGE1 server and network adapters
+
+The EDGE1 server is the gateway for the private network.
+As such, it needs two NICs -
+one on the private network,
+and one on an "external" Hyper-V switch.
+
+This is defined in the configuration data like this:
+
+    Lability_SwitchName          = @('Wifi-HyperV-VSwitch', 'AOAGLAB-CORPNET')
+
+However, the order of those switches is not deterministic :/.
+
+This means that you will need to ensure that the EDGE1 server NICs come up in the correct order.
+You can see this in the Hyper-V manager app,
+by selecting the VM and then clicking on the Networking tab.
+Ensure that the adapter attached to your external VSwitch has an external VSwitch IP address,
+while the adapter attached to the private VSwitch has the address assigned in the config data.
+
+See also:
+<https://github.com/VirtualEngine/Lability/issues/176>
+
 ### Startup time
 
 On my laptop with 4 cores and 32GB of RAM:

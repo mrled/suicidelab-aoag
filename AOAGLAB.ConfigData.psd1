@@ -3,9 +3,8 @@
         @{
             NodeName                    = '*';
             InterfaceAlias              = 'Ethernet';
-            DefaultGateway              = '10.0.0.2';
             AddressFamily               = 'IPv4';
-            DnsConnectionSuffix          = 'aoaglab.vlack.com';
+            DnsConnectionSuffix         = 'aoaglab.vlack.com';
             DnsServerAddress            = '10.0.0.1';
             DomainName                  = 'aoaglab.vlack.com';
             PSDscAllowPlainTextPassword = $true;
@@ -26,6 +25,7 @@
             NodeName                = 'AOAGLAB-DC1';
             IPAddress               = '10.0.0.1/24';
             DnsServerAddress        = '127.0.0.1';
+            DefaultGateway          = '10.0.0.2';
             Role                    = 'DC';
             Lability_ProcessorCount = 2;
             Lability_Resource           = @(
@@ -41,7 +41,7 @@
             SecondaryInterfaceAlias      = 'Ethernet 2';
             SecondaryDnsConnectionSuffix = 'c4dq.com'
 
-            # First switch in this list is 'Ethernet 2'; second switch in this list is 'Ethernet'
+            # These switches appear to get attached to the VM in _random_ order :/ - see readme
             Lability_SwitchName          = @('Wifi-HyperV-VSwitch', 'AOAGLAB-CORPNET')
             Lability_ProcessorCount     = 2
             Lability_Resource           = @(

@@ -36,6 +36,7 @@ Configuration "$labConfigurationName" {
                     InterfaceAlias = $node.InterfaceAlias;
                     Address        = $node.DefaultGateway;
                     AddressFamily  = $node.AddressFamily;
+                    DependsOn      = '[xIPAddress]PrimaryIPAddress';
                 }
             }
 
@@ -44,6 +45,7 @@ Configuration "$labConfigurationName" {
                     Address        = $node.DnsServerAddress;
                     InterfaceAlias = $node.InterfaceAlias;
                     AddressFamily  = $node.AddressFamily;
+                    DependsOn      = '[xIPAddress]PrimaryIPAddress';
                 }
             }
 
@@ -51,6 +53,7 @@ Configuration "$labConfigurationName" {
                 xDnsConnectionSuffix 'PrimaryConnectionSuffix' {
                     InterfaceAlias           = $node.InterfaceAlias;
                     ConnectionSpecificSuffix = $node.DnsConnectionSuffix;
+                    DependsOn                = '[xIPAddress]PrimaryIPAddress';
                 }
             }
 
@@ -167,13 +170,6 @@ Configuration "$labConfigurationName" {
 
     node $AllNodes.Where({$_.Role -in 'EDGE'}).NodeName {
 
-        WindowsFeature AddRoutingComponent {
-            Ensure               = 'Present';
-            Name                 = 'Routing';
-            IncludeAllSubFeature = $true;
-            DependsOn            = '[xComputer]DomainMembership';
-        }
-
         Script NewNetNat {
             GetScript = { return @{ Result = "" } }
             TestScript = {
@@ -188,7 +184,7 @@ Configuration "$labConfigurationName" {
                 New-NetNat -Name NATNetwork -InternalIPInterfaceAddressPrefix "10.0.0.0/24"
             }
             PsDscRunAsCredential = $Credential
-            DependsOn            = '[WindowsFeature]AddRoutingComponent';
+            DependsOn = '[xComputer]DomainMembership';
         }
 
     }
