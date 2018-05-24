@@ -1,8 +1,12 @@
+[CmdletBinding()] Param(
+    [string] $LabConfigurationName = "AoagLab",
+    [string] $AdminPassword = 'mean solely signify dewberry 3.X',
+    [switch] $DeleteExistingDisks
+)
+
 $ErrorActionPreference = "Stop"
 
-$labConfigurationName = "AoagLab"
-
-Configuration "$labConfigurationName" {
+Configuration "$LabConfigurationName" {
     param (
         [Parameter()] [ValidateNotNull()] [PSCredential] $Credential = (Get-Credential -Credential 'Administrator')
     )
@@ -71,11 +75,10 @@ Configuration "$labConfigurationName" {
         }
     } #end nodes ALL
 
-    # Do not set the default gateway for the EDGE server here
-    # to avoid errors like 'New-NetRoute : Instance MSFT_NetRoute already exists'
-    # When this configuration was part of the .Where({$true}) stanza, above,
+    # Do not set the default gateway for the EDGE server to avoid errors like
+    # 'New-NetRoute : Instance MSFT_NetRoute already exists'
+    # When this configuration was part of the .Where({$true}) stanza above,
     # I got those errors on EDGE all the time.
-    # Breaking that out to see if this fixes it...
     node $AllNodes.Where({$_.Role -NotIn 'EDGE'}).NodeName {
         xDefaultGatewayAddress 'NonEdgePrimaryDefaultGateway' {
             InterfaceAlias = $node.InterfaceAlias;
@@ -175,20 +178,11 @@ Configuration "$labConfigurationName" {
 
     node $AllNodes.Where({$_.Role -in 'EDGE'}).NodeName {
 
-        # Do not set the default gateway when setting it for the rest of the machines
-        # See previous xDefaultGatewayAddress stanza for more info
-        xDefaultGatewayAddress 'EdgePrimaryDefaultGateway' {
-            InterfaceAlias = $node.InterfaceAlias;
-            Address        = $node.DefaultGateway;
-            AddressFamily  = $node.AddressFamily;
-            DependsOn      = '[xComputer]DomainMembership';
-        }
-
         Script "NewNetNat" {
             GetScript = { return @{ Result = "" } }
             TestScript = {
                 try {
-                    Get-NetNat -Name NATNetwork | Out-Null
+                    Get-NetNat -Name NATNetwork -ErrorAction Stop | Out-Null
                     return $true
                 } catch {
                     return $false
@@ -198,7 +192,7 @@ Configuration "$labConfigurationName" {
                 New-NetNat -Name NATNetwork -InternalIPInterfaceAddressPrefix "10.0.0.0/24"
             }
             PsDscRunAsCredential = $Credential
-            DependsOn = '[xDefaultGatewayAddress]EdgePrimaryDefaultGateway';
+            DependsOn = '[xComputer]DomainMembership';
         }
 
     }
@@ -256,13 +250,21 @@ Configuration "$labConfigurationName" {
 
 $Error.Clear()
 
+if ($DeleteExistingDisks) {
+    $vmDiskPath = Get-LabHostDefault | Select-Object -ExpandProperty DifferencingVhdPath
+    do {
+        Remove-Item -Path $vmDiskPath\AOAGLAB-* -ErrorAction SilentlyContinue -Force
+        Start-Sleep -Seconds 2
+    } while (Get-ChildItem -Path $vmDiskPath\AOAGLAB-*)
+}
+
 $configData = "$PSScriptRoot\AOAGLAB.ConfigData.psd1"
 $adminCred = New-Object -TypeName PSCredential -ArgumentList @(
     "Administrator",
-    ('mean solely signify dewberry 3.X' | ConvertTo-SecureString -AsPlainText -Force)
+    ($AdminPassword | ConvertTo-SecureString -AsPlainText -Force)
 )
 $configRoot = Get-LabHostDefault | Select-Object -ExpandProperty ConfigurationPath
-& $labConfigurationName -ConfigurationData $configData -OutputPath $configRoot -Credential $adminCred -Verbose
+& $LabConfigurationName -ConfigurationData $configData -OutputPath $configRoot -Credential $adminCred -Verbose
 Test-LabConfiguration -ConfigurationData $configData -Verbose
-Start-LabConfiguration -ConfigurationData $configData -Verbose -Credential $adminCred
+Start-LabConfiguration -ConfigurationData $configData -Verbose -Credential $adminCred -IgnorePendingReboot
 Start-Lab -ConfigurationData $configData -Verbose

@@ -50,17 +50,6 @@ On my laptop with 4 cores and 32GB of RAM:
 
  -  The domain controller comes up in about 15 minutes
 
-### Redeploying
-
- -  Delete the VMs in Hyper-V manager
-
- -  You may also need to delete the VHDX files;
-    you can do so with this command:
-
-        do { rm C:\Lability\VMVirtualHardDisks\AOAGLAB-* -ErrorAction SilentlyContinue -Force; sleep 2} while (ls C:\Lability\VMVirtualHardDisks\AOAGLAB-*)
-
- -  Then just redeploy as above
-
 ## Debugging tips
 
 Sometimes the VMs just don't come up.

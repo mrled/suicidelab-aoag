@@ -43,6 +43,7 @@
 
             # These switches appear to get attached to the VM in _random_ order :/ - see readme
             Lability_SwitchName          = @('Wifi-HyperV-VSwitch', 'AOAGLAB-CORPNET')
+            # Lability_SwitchName          = @('AOAGLAB-CORPNET', 'Wifi-HyperV-VSwitch')
             Lability_ProcessorCount     = 2
             Lability_Resource           = @(
                 'Firefox'
