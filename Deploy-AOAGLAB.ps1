@@ -31,15 +31,6 @@ Configuration "$labConfigurationName" {
                 AddressFamily  = $node.AddressFamily
             }
 
-            if (-not [System.String]::IsNullOrEmpty($node.DefaultGateway)) {
-                xDefaultGatewayAddress 'PrimaryDefaultGateway' {
-                    InterfaceAlias = $node.InterfaceAlias;
-                    Address        = $node.DefaultGateway;
-                    AddressFamily  = $node.AddressFamily;
-                    DependsOn      = '[xIPAddress]PrimaryIPAddress';
-                }
-            }
-
             if (-not [System.String]::IsNullOrEmpty($node.DnsServerAddress)) {
                 xDnsServerAddress 'PrimaryDNSClient' {
                     Address        = $node.DnsServerAddress;
@@ -80,13 +71,27 @@ Configuration "$labConfigurationName" {
         }
     } #end nodes ALL
 
+    # Do not set the default gateway for the EDGE server here
+    # to avoid errors like 'New-NetRoute : Instance MSFT_NetRoute already exists'
+    # When this configuration was part of the .Where({$true}) stanza, above,
+    # I got those errors on EDGE all the time.
+    # Breaking that out to see if this fixes it...
+    node $AllNodes.Where({$_.Role -NotIn 'EDGE'}).NodeName {
+        xDefaultGatewayAddress 'NonEdgePrimaryDefaultGateway' {
+            InterfaceAlias = $node.InterfaceAlias;
+            Address        = $node.DefaultGateway;
+            AddressFamily  = $node.AddressFamily;
+            DependsOn      = '[xIPAddress]PrimaryIPAddress';
+        }
+    }
+
     node $AllNodes.Where({$_.Role -in 'DC'}).NodeName {
 
         xComputer 'Hostname' {
             Name = $node.NodeName;
         }
 
-        ## Hack to fix DependsOn with hypens "bug" :(
+        ## Hack to fix DependsOn with hyphens "bug" :(
         foreach ($feature in @(
                 'AD-Domain-Services',
                 'GPMC',
@@ -170,7 +175,16 @@ Configuration "$labConfigurationName" {
 
     node $AllNodes.Where({$_.Role -in 'EDGE'}).NodeName {
 
-        Script NewNetNat {
+        # Do not set the default gateway when setting it for the rest of the machines
+        # See previous xDefaultGatewayAddress stanza for more info
+        xDefaultGatewayAddress 'EdgePrimaryDefaultGateway' {
+            InterfaceAlias = $node.InterfaceAlias;
+            Address        = $node.DefaultGateway;
+            AddressFamily  = $node.AddressFamily;
+            DependsOn      = '[xComputer]DomainMembership';
+        }
+
+        Script "NewNetNat" {
             GetScript = { return @{ Result = "" } }
             TestScript = {
                 try {
@@ -184,7 +198,7 @@ Configuration "$labConfigurationName" {
                 New-NetNat -Name NATNetwork -InternalIPInterfaceAddressPrefix "10.0.0.0/24"
             }
             PsDscRunAsCredential = $Credential
-            DependsOn = '[xComputer]DomainMembership';
+            DependsOn = '[xDefaultGatewayAddress]EdgePrimaryDefaultGateway';
         }
 
     }

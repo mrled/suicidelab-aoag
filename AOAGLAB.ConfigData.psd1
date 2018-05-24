@@ -6,6 +6,7 @@
             AddressFamily               = 'IPv4';
             DnsConnectionSuffix         = 'aoaglab.vlack.com';
             DnsServerAddress            = '10.0.0.1';
+            DefaultGateway              = '10.0.0.2';
             DomainName                  = 'aoaglab.vlack.com';
             PSDscAllowPlainTextPassword = $true;
             PSDscAllowDomainUser        = $true; # Removes 'It is not recommended to use domain credential for node X' messages
@@ -25,7 +26,6 @@
             NodeName                = 'AOAGLAB-DC1';
             IPAddress               = '10.0.0.1/24';
             DnsServerAddress        = '127.0.0.1';
-            DefaultGateway          = '10.0.0.2';
             Role                    = 'DC';
             Lability_ProcessorCount = 2;
             Lability_Resource           = @(
