@@ -90,3 +90,26 @@ Finally, some links that might be helpful:
 
     -  Notes on how DSC resources are added to Lability VMs
     <https://github.com/VirtualEngine/Lability/issues/172>
+
+## TODO
+
+1.  I want to enable Windows Event Forwarding.
+    I will use the domain controller as the collector
+    (because it comes up first).
+
+     -  [Configure Computers to Forward and Collect Events](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc748890(v=ws.11))
+     -  [Create a new subscription](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc722010%28v%3dws.10%29)
+     -  [Event Subscriptions](https://docs.microsoft.com/en-us/previous-versions/windows/it-pro/windows-server-2008-R2-and-2008/cc749183(v=ws.11))
+     -  [Windows Event Collector](https://msdn.microsoft.com/en-us/library/bb427443(v=vs.85).aspx)
+     -  [Setting up a Source Initiated Subscription](https://msdn.microsoft.com/en-us/library/bb870973(v=vs.85).aspx)
+     -  [Creating a Collector Initiated Subscription](https://msdn.microsoft.com/en-us/library/bb513652(v=vs.85).aspx)
+     -  [Use Windows Event Forwarding to help with intrusion detection](https://docs.microsoft.com/en-us/windows/security/threat-protection/use-windows-event-forwarding-to-assist-in-intrusion-detection)
+     -  [Wecutil.exe](https://msdn.microsoft.com/en-us/library/windows/desktop/bb736545(v=vs.85).aspx)
+     -  [Monitoring what matters – Windows Event Forwarding for everyone (even if you already have a SIEM.)](https://blogs.technet.microsoft.com/jepayne/2015/11/23/monitoring-what-matters-windows-event-forwarding-for-everyone-even-if-you-already-have-a-siem/)
+     -  [DIY Client Monitoring – Setting up Tiered Event Forwarding](https://blogs.msdn.microsoft.com/canberrapfe/2015/09/21/diy-client-monitoring-setting-up-tiered-event-forwarding/)
+     -  [The Windows Event Forwarding Survival Guide](https://hackernoon.com/the-windows-event-forwarding-survival-guide-2010db7a68c4)
+     -  [Loggly - Logging - The Ultimate Guide - Centralizing Windows Logs](https://www.loggly.com/ultimate-guide/centralizing-windows-logs/)
+     -  [Powershell/xWindowsEventForwarding](https://github.com/PowerShell/xWindowsEventForwarding)
+     -  [nsacyber/Event-Forwarding-Guidance](https://github.com/nsacyber/Event-Forwarding-Guidance/tree/master/Subscriptions/samples)
+     -  [palantir/windows-event-forwarding](https://github.com/palantir/windows-event-forwarding)
+
