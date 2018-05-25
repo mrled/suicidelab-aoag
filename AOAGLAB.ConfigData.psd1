@@ -14,13 +14,6 @@
             Lability_StartupMemory      = 3GB;
             Lability_Media              = "2016_x64_Standard_EN_Eval";
             Lability_Timezone           = "Central Standard Time";
-            Lability_HardDiskDrive   = @(
-                @{
-                    Generation = 'VHDX'
-                    Type = 'Dynamic'
-                    MaximumSizeBytes = 50GB;
-                }
-            )
         }
         @{
             NodeName                = 'AOAGLAB-DC1';
