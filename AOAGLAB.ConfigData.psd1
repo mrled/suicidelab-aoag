@@ -28,16 +28,32 @@
         @{
             NodeName                     = 'AOAGLAB-EDGE1';
             Role                         = 'EDGE'
+            Lability_ProcessorCount     = 2
+
             IPAddress                    = '10.0.0.2/24';
 
-            SecondaryDnsServerAddress    = '1.1.1.1';
-            SecondaryInterfaceAlias      = 'Ethernet 2';
-            SecondaryDnsConnectionSuffix = 'c4dq.com'
+            # SecondaryDnsServerAddress    = '1.1.1.1';
+            # SecondaryInterfaceAlias      = 'Ethernet 2';
+            # SecondaryDnsConnectionSuffix = 'c4dq.com';
 
-            # These switches appear to get attached to the VM in _random_ order :/ - see readme
-            Lability_SwitchName          = @('Wifi-HyperV-VSwitch', 'AOAGLAB-CORPNET')
-            # Lability_SwitchName          = @('AOAGLAB-CORPNET', 'Wifi-HyperV-VSwitch')
-            Lability_ProcessorCount     = 2
+            # This VM acts as a NAT gateway between AOAGLAB-CORPNET and whatever network my WiFi adapter is connected to
+            # (Which almost certainly means that AOAGLAB-CORPNET is double-NAT'ed).
+            # However, the order that the switches get connected is not deterministic.
+            # Therefore, we have to set MAC addresses for each interface,
+            # rename each interface based on the MAC address,
+            # and then configure IP addresses etc based on the new name of the interface.
+            # Technique found here:
+            # - https://github.com/VirtualEngine/Lability/blob/dev/Examples/MultipleNetworkExample.ps1
+            # - https://github.com/VirtualEngine/Lability/blob/dev/Examples/MultipleNetworkExample.psd1
+            # and mentioned here as a solution for our problem:
+            # - https://github.com/VirtualEngine/Lability/issues/176
+            #
+            # Hyper-V MAC address range '00-15-5d-00-00-00' thru '00-15-5d-ff-ff-ff'.
+            # WARNING: BE CAREFUL OF DUPLICATE MAC ADDRESSES IF USING EXTERNAL SWITCHES!
+            Lability_MACAddress         = @('00-15-5d-cf-01-01', '00-15-5d-cf-01-02')
+            Lability_SwitchName         = @('Wifi-HyperV-VSwitch', 'AOAGLAB-CORPNET')
+            InterfaceAlias              = @('Public', 'AOAGLAB-CORPNET')
+
             Lability_Resource           = @(
                 'Firefox'
             )
