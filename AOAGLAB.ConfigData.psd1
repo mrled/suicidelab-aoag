@@ -81,7 +81,11 @@
         Lability = @{
             Media = @()
             Network = @(
-                @{ Name = 'AOAGLAB-CORPNET'; Type = 'Internal'; }
+                # Use a *private* switch, not an internal one,
+                # so that our Hyper-V host doesn't get a NIC w/ DHCP lease on the corporate network,
+                # which can cause networking problems on the host.
+                @{ Name = 'AOAGLAB-CORPNET'; Type = 'Private'; }
+
                 # The Wifi-HyperV-VSwitch is already defined on my machine - do not manage it here
                 # If that switch does not exist on your machine, you should define an External switch and set its name here
                 # @{ Name = 'Wifi-HyperV-VSwitch'; Type = 'External'; NetAdapterName = 'WiFi'; AllowManagementOS = $true; }
