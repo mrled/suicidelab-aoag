@@ -21,20 +21,16 @@
             DnsServerAddress        = '127.0.0.1';
             Role                    = 'DC';
             Lability_ProcessorCount = 2;
-            Lability_Resource           = @(
+            Lability_Resource       = @(
                 'Firefox'
             )
         }
         @{
             NodeName                     = 'AOAGLAB-EDGE1';
             Role                         = 'EDGE'
-            Lability_ProcessorCount     = 2
+            Lability_ProcessorCount      = 2
 
             IPAddress                    = '10.0.0.2/24';
-
-            # SecondaryDnsServerAddress    = '1.1.1.1';
-            # SecondaryInterfaceAlias      = 'Ethernet 2';
-            # SecondaryDnsConnectionSuffix = 'c4dq.com';
 
             # This VM acts as a NAT gateway between AOAGLAB-CORPNET and whatever network my WiFi adapter is connected to
             # (Which almost certainly means that AOAGLAB-CORPNET is double-NAT'ed).
@@ -51,7 +47,7 @@
             # Hyper-V MAC address range '00-15-5d-00-00-00' thru '00-15-5d-ff-ff-ff'.
             # WARNING: BE CAREFUL OF DUPLICATE MAC ADDRESSES IF USING EXTERNAL SWITCHES!
             Lability_MACAddress         = @('00-15-5d-cf-01-01', '00-15-5d-cf-01-02')
-            Lability_SwitchName         = @('Wifi-HyperV-VSwitch', 'AOAGLAB-CORPNET')
+            Lability_SwitchName         = @('Default Switch', 'AOAGLAB-CORPNET')
             InterfaceAlias              = @('Public', 'AOAGLAB-CORPNET')
 
             Lability_Resource           = @(
@@ -62,20 +58,30 @@
         #     NodeName                  = 'AOAGLAB-WEB1';
         #     IPAddress                 = '10.0.0.3/24';
         #     Role                      = 'WEB';
-        #     Lability_ProcessorCount     = 1;
+        #     Lability_ProcessorCount   = 1;
         # }
-        # @{
-        #     NodeName                  = 'AOAGLAB-SQL1';
-        #     IPAddress                 = '10.0.0.10/24';
-        #     Role                      = 'SQL';
-        #     Lability_ProcessorCount     = 1;
-        # }
-        # @{
-        #     NodeName                  = 'AOAGLAB-SQL2';
-        #     IPAddress                 = '10.0.0.11/24';
-        #     Role                      = 'SQL';
-        #     Lability_ProcessorCount     = 1;
-        # }
+        @{
+            NodeName                  = 'AOAGLAB-SQL1';
+            IPAddress                 = '10.0.0.10/24';
+            Role                      = 'SQL';
+            Lability_ProcessorCount   = 1;
+            Lability_Resource         = @(
+                'Firefox'
+                'SqlServer2016Eval'
+                'SSMS2017'
+            )
+        }
+        @{
+            NodeName                  = 'AOAGLAB-SQL2';
+            IPAddress                 = '10.0.0.11/24';
+            Role                      = 'SQL';
+            Lability_ProcessorCount   = 1;
+            Lability_Resource         = @(
+                'Firefox'
+                'SqlServer2016Eval'
+                'SSMS2017'
+            )
+        }
     )
     NonNodeData = @{
         Lability = @{
@@ -86,9 +92,7 @@
                 # which can cause networking problems on the host.
                 @{ Name = 'AOAGLAB-CORPNET'; Type = 'Private'; }
 
-                # The Wifi-HyperV-VSwitch is already defined on my machine - do not manage it here
-                # If that switch does not exist on your machine, you should define an External switch and set its name here
-                # @{ Name = 'Wifi-HyperV-VSwitch'; Type = 'External'; NetAdapterName = 'WiFi'; AllowManagementOS = $true; }
+                # THe 'Default Switch' is installed with Hyper-V and is not managed here
             )
 
             DSCResource = @(
@@ -105,6 +109,19 @@
                     Id = 'Firefox'
                     Filename = 'Firefox-Latest.exe'
                     Uri = 'https://download.mozilla.org/?product=firefox-latest-ssl&os=win64&lang=en-US'
+                }
+                @{
+                    Id = 'SqlServer2016Eval'
+                    Filename = 'SQLServer2016SP2-FullSlipstream-x64-ENU.iso'
+                    Uri = 'https://download.microsoft.com/download/4/1/A/41AD6EDE-9794-44E3-B3D5-A1AF62CD7A6F/sql16_sp2_dlc/en-us/SQLServer2016SP2-FullSlipstream-x64-ENU.iso'
+                    Expand = $true
+                    Checksum = "87fc4cb4d62a9278c6e2a76e28b9cd79"
+                }
+                @{
+                    Id = 'SSMS2017'
+                    Filename = "SSMS-Setup-ENU.exe"
+                    Uri = "https://download.microsoft.com/download/0/D/2/0D26856F-E602-4FB6-8F12-43D2559BDFE4/SSMS-Setup-ENU.exe"
+                    Checksum = 'BA07866DEB8CA9E8A42A0E6BA1328082'
                 }
             )
         }
