@@ -1,6 +1,8 @@
 Configuration AoagLab {
     param (
-        [Parameter()] [ValidateNotNull()] [PSCredential] $Credential = (Get-Credential -Credential 'Administrator')
+        [Parameter(Mandatory)] [string[]] $SqlServerIniContents,
+        [Parameter(Mandatory)] [SecureString] $SqlServerSaPassword,
+        [PSCredential] $Credential = (Get-Credential -Credential 'Administrator')
     )
     Import-DscResource -Module PSDesiredStateConfiguration
 
@@ -277,66 +279,70 @@ Configuration AoagLab {
             }
         }
 
-        # UNTESTED BELOW HERE
+        File SqlServerConfigurationFile {
+            Contents = $SqlServerIniContents
+            DestinationPath = "C:\SqlServerConfigurationFile.ini"
+            Type = "File"
+            Ensure = "Present"
+            DependsOn = "[xComputer]DomainMembership"
+        }
 
-        # File SqlServerConfigurationFile {
-        #     SourcePath = "SqlServerConfigurationFile.ini"
-        #     DestinationPath = "C:\ConfigurationFile.ini"
-        #     Type = "File"
-        #     Ensure = "Present"
-        #     DependsOn = "[xComputer]DomainMembership"
-        # }
+        Script InstallSQLServer {
+            GetScript = {
+                $sqlInstances = Get-WmiObject -Class win32_service -ComputerName localhost |
+                    Where-Object -Property Name -Match "mssql*" -and -Property PathName -Match "sqlservr.exe" |
+                    Select-Object -ExpandProperty Caption
+                $res = $sqlInstances -ne $null -and $sqlInstances -gt 0
+                return @{
+                    Installed = $res;
+                    InstanceCount = $sqlInstances.count
+                }
+            }
+            TestScript = {
+                $sqlInstances = Get-WmiObject -Class win32_service -ComputerName localhost |
+                    Where-Object -Property Name -Match "mssql*" -and -Property PathName -Match "sqlservr.exe" |
+                    Select-Object -ExpandProperty Caption
+                return $sqlInstances -ne $null -and $sqlInstances -gt 0
+            }
+            SetScript = {
+                $securePass = ${using:SqlServerSaPassword}
+                $plainPass = (New-Object -TypeName PSCredential -ArgumentList @('ignored', $securePass)).GetNetworkCredential().Password
+                # NOTE: Logs saved in $env:ProgramFiles\Microsoft SQL Server\120\Setup Bootstrap\Log
+                Start-Process -NoNewWindow -Wait -FilePath "C:\Resources\SqlServer2016Eval\Setup.exe" -ArgumentList @(
+                    "/ConfigurationFile=C:\SqlServerConfigurationFile.ini"
+                    "/SQLSVCPASSWORD=$plainPass"
+                    "/AGTSVCPASSWORD=$plainPass"
+                    "/SAPWD=$plainPass"
+                )
+            }
+            DependsOn = "[File]SqlServerConfigurationFile"
+        }
 
-        # Script InstallSQLServer {
-        #     GetScript = {
-        #         $sqlInstances = Get-WmiObject -Class win32_service -ComputerName localhost |
-        #             Where-Object -Property Name -Match "mssql*" -and -Property PathName -Match "sqlservr.exe" |
-        #             Select-Object -ExpandProperty Caption
-        #         $res = $sqlInstances -ne $null -and $sqlInstances -gt 0
-        #         return @{
-        #             Installed = $res;
-        #             InstanceCount = $sqlInstances.count
-        #         }
-        #     }
-        #     TestScript = {
-        #         $sqlInstances = Get-WmiObject -Class win32_service -ComputerName localhost |
-        #             Where-Object -Property Name -Match "mssql*" -and -Property PathName -Match "sqlservr.exe" |
-        #             Select-Object -ExpandProperty Caption
-        #         return $sqlInstances -ne $null -and $sqlInstances -gt 0
-        #     }
-        #     SetScript = {
-        #         # NOTE: Logs saved in $env:ProgramFiles\Microsoft SQL Server\120\Setup Bootstrap\Log
-        #         Start-Process -Path "C:\Resources\SqlServer2016Eval\Setup.exe" -ArgumentList @(
-        #             "/ConfigurationFile=c:\temp\ConfigurationFile.ini"
-        #             "/SQLSVCPASSWORD=P2ssw0rd"
-        #             "/AGTSVCPASSWORD=P2ssw0rd"
-        #             "/SAPWD=P2ssw0rd"
-        #         )
-        #     }
-        #     DependsOn = "[File]SqlServerConfigurationFile"
-        # }
+        Script InstallSSMS {
+            GetScript = { return @{ Result = "" } }
+            TestScript = {
+                Test-Path -Path "C:\Program Files (x86)\Microsoft SQL Server\140\Tools\Binn\ManagementStudio\Ssms.exe"
+            }
+            SetScript = {
+                Start-Process -NoNewWindow -Wait -FilePath "C:\Resources\SSMS-Setup-ENU.exe" -ArgumentList @(
+                    '/install'
+                    '/quiet'
+                    '/norestart'
+                )
+            }
+            DependsOn = "[Script]InstallSQLServer"
+        }
 
-        # Script InstallSSMS {
-        #     GetScript = { return @{ Result = "" } }
-        #     TestScript = {
-        #         Test-Path -Path "C:\Program Files (x86)\Microsoft SQL Server\140\Tools\Binn\ManagementStudio\Ssms.exe"
-        #     }
-        #     SetScript = {
-        #         Start-Process -Path "C:\Resources\SSMS-Setup-ENU.exe"
-        #     }
-        #     DependsOn = "[Script]InstallSQLServer"
-        # }
-
-        # xFirewall 'EnableSqlPort' {
-        #     Name        = 'SQLSERVER';
-        #     DisplayName = 'SQL Server';
-        #     Direction   = 'Inbound';
-        #     Action      = 'Allow';
-        #     Ensure      = 'Present';
-        #     Enabled     = 'True';
-        #     Profile     = 'Any';
-        #     LocalPort   = 1433;
-        # }
+        xFirewall 'EnableSqlPort' {
+            Name        = 'SQLSERVER';
+            DisplayName = 'SQL Server';
+            Direction   = 'Inbound';
+            Action      = 'Allow';
+            Ensure      = 'Present';
+            Enabled     = 'True';
+            Profile     = 'Any';
+            LocalPort   = 1433;
+        }
 
     }
 

@@ -1,6 +1,7 @@
 [CmdletBinding()] Param(
     [string] $ConfigurationData = (Join-Path -Path $PSScriptRoot -ChildPath ConfigurationData.AOAGLAB.psd1),
     [string] $ConfigureScript = (Join-Path -Path $PSScriptRoot -ChildPath Configure.AOAGLAB.ps1),
+    [string] $SqlServerConfigPath = (Join-Path -Path $PSScriptRoot -ChildPath SqlServerConfigurationFile.ini),
     [string] $DscConfigName = "AoagLab",
     [SecureString] $AdminPassword = ('mean solely signify dewberry 3.X' | ConvertTo-SecureString -AsPlainText -Force),
     [SecureString] $SqlServerSaPassword = ('coral.obligate.vintage.clip.34' | ConvertTo-SecureString -AsPlainText -Force),
@@ -42,8 +43,9 @@ if ($DeleteExisting) {
 }
 
 $adminCred = New-Object -TypeName PSCredential -ArgumentList @("Administrator", $AdminPassword)
+$sqlServerConfig = Get-Content -Path $SqlServerConfigPath
 
 . $ConfigureScript
-& $DscConfigName -ConfigurationData $ConfigurationData -OutputPath $env:LabilityConfigurationPath -Verbose -Credential $adminCred
+& $DscConfigName -ConfigurationData $ConfigurationData -OutputPath $env:LabilityConfigurationPath -Verbose -Credential $adminCred -SqlServerIniContents $sqlServerConfig
 Start-LabConfiguration -ConfigurationData $ConfigurationData -Path $env:LabilityConfigurationPath -Verbose -Password $AdminPassword -IgnorePendingReboot:$IgnorePendingReboot
 Start-Lab -ConfigurationData $ConfigurationData -Verbose
