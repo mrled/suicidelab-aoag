@@ -284,7 +284,7 @@ Configuration AoagLab {
         }
 
         File SqlServerConfigurationFile {
-            Contents = $SqlServerIniContents
+            Contents = $SqlServerIniContents -Join "`r`n"
             DestinationPath = "C:\SqlServerConfigurationFile.ini"
             Type = "File"
             Ensure = "Present"
