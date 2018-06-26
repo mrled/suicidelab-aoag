@@ -17,7 +17,7 @@
             Lability_Timezone           = "Central Standard Time";
 
             ClusterName                 = "AOAGCLUSTER"
-            ClusterIp                   = "10.0.0.90"
+            ClusterIp                   = "10.0.0.90/24"
             ClusterWitnessShare         = "TestClusterWitness"
             ClusterBackupShare          = "TestClusterBackup"
             SqlServiceAccountName       = "SqlService"
@@ -108,6 +108,7 @@
                 @{ Name = 'xComputerManagement'; RequiredVersion = '4.1.0.0'; }
                 @{ Name = 'xDhcpServer'; RequiredVersion = '1.6.0.0'; }
                 @{ Name = 'xDnsServer'; RequiredVersion = '1.7.0.0'; }
+                @{ Name = 'xFailOverCluster'; RequiredVersion = '1.10.0.0'; }
                 @{ Name = 'xNetworking'; RequiredVersion = '5.7.0.0'; }
                 @{ Name = 'xSmbShare'; RequiredVersion = '2.0.0.0'; }
             )

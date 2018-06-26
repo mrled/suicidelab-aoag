@@ -10,6 +10,7 @@ Configuration AoagLab {
     Import-DscResource -Module xComputerManagement -ModuleVersion 4.1.0.0
     Import-DscResource -Module xDHCPServer -ModuleVersion 1.6.0.0
     Import-DscResource -Module xDnsServer -ModuleVersion 1.7.0.0
+    Import-DscResource -Module xFailOverCluster -ModuleVersion 1.10.0.0
     Import-DscResource -Module xNetworking -ModuleVersion 5.7.0.0
     Import-DscResource -Module xSmbShare -ModuleVersion 2.0.0.0
 
@@ -217,12 +218,20 @@ Configuration AoagLab {
     }
 
     node $AllNodes.Where({$_.Role -in 'DC'}).NodeName {
+        xWaitForCluster 'DcWaitForCluster' {
+            Name                = $node.ClusterName
+            RetryIntervalSec    = 10
+            RetryCount          = 60
+            DependsOn           = "[xADDomain]ADDomain"
+        }
+
         File "CreateClusterWitnessDirectory" {
             Type = 'Directory'
             DestinationPath = 'C:\TestClusterWitness'
             Ensure = "Present"
-            DependsOn   = '[xADDomain]ADDomain';
+            DependsOn   = '[xWaitForCluster]DcWaitForCluster';
         }
+
         xSmbShare "CreateClusterWitnessShare" {
             Ensure = "Present"
             Name = $node.ClusterWitnessShare
@@ -231,12 +240,9 @@ Configuration AoagLab {
             FullAccess = @(
                 "Administrator@$($node.DomainName)"
                 "User1@$($node.DomainName)"
-                # Setting permissions for the _cluster computer account"
+                # Setting permissions for the **cluster computer account**
                 # There will be a computer account created with the cluster name when the cluster is created
                 # See also <https://docs.microsoft.com/en-us/windows-server/failover-clustering/manage-cluster-quorum>
-                # That won't happen until after the domain is up and joined
-                # Not sure if it will retry on each machine until it succeeds,
-                # or if this is as of now a completely broken configuration...
                 "$($node.ClusterName)@$($node.DomainName)"
             )
             DependsOn   = '[File]CreateClusterWitnessDirectory';
@@ -246,8 +252,9 @@ Configuration AoagLab {
             Type = 'Directory'
             DestinationPath = 'C:\TestClusterBackup'
             Ensure = "Present"
-            DependsOn   = '[xADDomain]ADDomain';
+            DependsOn   = '[xWaitForCluster]DcWaitForCluster';
         }
+
         xSmbShare "CreateClusterBackupShare" {
             Ensure = "Present"
             Name = $node.ClusterBackupShare
@@ -384,49 +391,46 @@ Configuration AoagLab {
             LocalPort   = 1433;
         }
 
-        Script 'CreateCluster' {
-            GetScript = { return @{ Result = "" } }
-            TestScript = {
-                try {
-                    Get-Cluster -Name $using:node.ClusterName -ErrorAction Stop | Out-Null
-                    return $true
-                } catch {
-                    return $false
-                }
-            }
-            SetScript = {
-                $ncParams = @{
-                    Name = $using:node.ClusterName
-                    StaticAddress = $using:node.ClusterAddress
-                    Node = $AllNodes.Where({$_.Role -in 'SQL'}).NodeName
-                    Force = $true
-                }
-                New-Cluster @ncParams
-            }
+    }
+
+    # Create the cluster on the first node...
+    node 'AOAGLAB-SQL1' {
+
+        $dcName = $AllNodes.Where({$_.Role -in 'DC'}).NodeName | Select-Object -First 1
+
+        # Get-Cluster -Name whatever
+        # New-Cluster -Name whatever -StaticAddress 192.168.1.66/24 -Node @('lab-sql1', 'lab-sql2') -Force
+        xCluster 'CreateAoagCluster' {
+            Name = $node.ClusterName
+            StaticIPAddress = $node.ClusterAddress
+            DomainAdministratorCredential = $Credential
             DependsOn = "[WindowsFeature]RSATClustering"
         }
 
-        Script 'AddClusterWitness' {
-            GetScript = { return @{ Result = "" } }
-            TestScript = {
-                try {
-                    Get-ClusterNode -Cluster $using:node.ClusterName |
-                        Where-Object -Property Name -EQ $env:COMPUTERNAME |
-                        Out-Null
-                    return $true
-                } catch {
-                    return $false
-                }
-            }
-            SetScript = {
-                $allNodesCopy = $using:AllNodes  # Not sure if this is a problem but IntelliSense didn't like it
-                $dcNodeName = $allNodesCopy.Where({$_.Role -in 'DC'}).NodeName | Select-Object -First 1
-                $shareUncPath = "\\${dcNodeName}\$($using:node.ClusterWitnessShare)"
-                Set-ClusterQuorum -Cluster -NodeAndFileShareMajority $shareUncPath
-            }
-            DependsOn = "[WindowsFeature]RSATClustering"
+        # Get-ClusterQuorum
+        # Set-ClusterQuorum -Cluster whatever -NodeAndFileShareMajority \\example.com\witnessshare
+        xClusterQuorum 'SetQuorumToNodeAndDiskMajority' {
+            IsSingleInstance = 'Yes'
+            Type             = 'NodeAndFileShareMajority'
+            Resource         = "\\$dcName\$($node.ClusterWitnessShare)"
+            DependsOn = "[xCluster]CreateAoagCluster"
         }
+    }
 
+    # Join the cluster for all other nodes...
+    node $AllNodes.Where({$_.Role -in 'SQL' -and $_.NodeName -ne 'AOAGLAB-SQL1'}).NodeName {
+        xWaitForCluster 'WaitForCluster' {
+            Name                = $node.ClusterName
+            RetryIntervalSec    = 10
+            RetryCount          = 60
+            DependsOn           = "[WindowsFeature]RSATClustering"
+        }
+        xCluster 'JoinCluster' {
+            Name                          = 'Cluster01'
+            StaticIPAddress               = '192.168.100.20/24'
+            DomainAdministratorCredential = $Credential
+            DependsOn                     = '[xWaitForCluster]WaitForCluster'
+        }
     }
 
     node $AllNodes.Where({$_.Role -in 'WEB'}).NodeName {
