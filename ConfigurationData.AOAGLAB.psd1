@@ -19,6 +19,9 @@
             ClusterName                 = "AOAGCLUSTER"
             ClusterIp                   = "10.0.0.90"
             ClusterWitnessShare         = "TestClusterWitness"
+            ClusterBackupShare          = "TestClusterBackup"
+            SqlServiceAccountName       = "SqlService"
+            SqlServiceAccountPassword   = '|dsAdOv$anX$ZSsA'
         }
         @{
             NodeName                = 'AOAGLAB-DC1';

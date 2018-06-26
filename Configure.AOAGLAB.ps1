@@ -205,6 +205,15 @@ Configuration AoagLab {
             DependsOn        = '[xADUser]User1';
         }
 
+        xADUser SqlServiceAccountName {
+            DomainName  = $node.DomainName;
+            UserName    = $node.SqlServiceAccountName;
+            Description = 'SQL Server Service Account';
+            Password    = $node.SqlServiceAccountPassword
+            Ensure      = 'Present';
+            DependsOn   = '[xADDomain]ADDomain';
+        }
+
     }
 
     node $AllNodes.Where({$_.Role -in 'DC'}).NodeName {
@@ -219,11 +228,38 @@ Configuration AoagLab {
             Name = $node.ClusterWitnessShare
             Path = "C:\TestClusterWitness"
             Description = "A fileshare witness for the test cluster"
+            FullAccess = @(
+                "Administrator@$($node.DomainName)"
+                "User1@$($node.DomainName)"
+                # Setting permissions for the _cluster computer account"
+                # There will be a computer account created with the cluster name when the cluster is created
+                # See also <https://docs.microsoft.com/en-us/windows-server/failover-clustering/manage-cluster-quorum>
+                # That won't happen until after the domain is up and joined
+                # Not sure if it will retry on each machine until it succeeds,
+                # or if this is as of now a completely broken configuration...
+                "$($node.ClusterName)@$($node.DomainName)"
+            )
             DependsOn   = '[File]CreateClusterWitnessDirectory';
         }
-        # TODO: Set permissions for _cluster computer account_
-        #       See also <https://docs.microsoft.com/en-us/windows-server/failover-clustering/manage-cluster-quorum>
-        #       According to that, the share "[m]ust have write permissions enabled for the computer object for the cluster name"
+
+        File "CreateClusterBackupDirectory" {
+            Type = 'Directory'
+            DestinationPath = 'C:\TestClusterBackup'
+            Ensure = "Present"
+            DependsOn   = '[xADDomain]ADDomain';
+        }
+        xSmbShare "CreateClusterBackupShare" {
+            Ensure = "Present"
+            Name = $node.ClusterBackupShare
+            Path = "C:\TestClusterBackup"
+            Description = "A fileshare for SQL backups for the test cluster"
+            FullAccess = @(
+                "Administrator@$($node.DomainName)"
+                "User1@$($node.DomainName)"
+                "$($node.SqlServiceAccountName)@$($node.DomainName)"
+            )
+            DependsOn   = '[File]CreateClusterBackupDirectory';
+        }
     }
 
     node $AllNodes.Where({$_.Role -in 'WEB','SQL','EDGE'}).NodeName {
