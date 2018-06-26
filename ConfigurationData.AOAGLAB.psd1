@@ -10,17 +10,22 @@
             DomainName                  = 'aoaglab.vlack.com';
             PSDscAllowPlainTextPassword = $true;
             PSDscAllowDomainUser        = $true; # Removes 'It is not recommended to use domain credential for node X' messages
+
             Lability_SwitchName         = 'AOAGLAB-CORPNET';
             Lability_StartupMemory      = 3GB;
             Lability_Media              = "2016_x64_Standard_EN_Eval";
             Lability_Timezone           = "Central Standard Time";
+
+            ClusterName                 = "AOAGCLUSTER"
+            ClusterIp                   = "10.0.0.90"
+            ClusterWitnessShare         = "TestClusterWitness"
         }
         @{
             NodeName                = 'AOAGLAB-DC1';
             IPAddress               = '10.0.0.1/24';
             DnsServerAddress        = '127.0.0.1';
             Role                    = 'DC';
-            Lability_ProcessorCount = 2;
+            Lability_ProcessorCount = 1;
             Lability_Resource       = @(
                 'Firefox'
             )
@@ -28,7 +33,7 @@
         @{
             NodeName                     = 'AOAGLAB-EDGE1';
             Role                         = 'EDGE'
-            Lability_ProcessorCount      = 2
+            Lability_ProcessorCount      = 1
 
             IPAddress                    = '10.0.0.2/24';
 
@@ -48,7 +53,7 @@
             # WARNING: BE CAREFUL OF DUPLICATE MAC ADDRESSES IF USING EXTERNAL SWITCHES!
             Lability_MACAddress         = @('00-15-5d-cf-01-01', '00-15-5d-cf-01-02')
             Lability_SwitchName         = @('Default Switch', 'AOAGLAB-CORPNET')
-            InterfaceAlias              = @('Public', 'AOAGLAB-CORPNET')
+            InterfaceAlias              = @('Public Network', 'Domain Network')
 
             Lability_Resource           = @(
                 'Firefox'

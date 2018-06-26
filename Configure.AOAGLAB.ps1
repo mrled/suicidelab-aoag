@@ -216,11 +216,14 @@ Configuration AoagLab {
         }
         xSmbShare "CreateClusterWitnessShare" {
             Ensure = "Present"
-            Name = "TestClusterWitness"
+            Name = $node.ClusterWitnessShare
             Path = "C:\TestClusterWitness"
             Description = "A fileshare witness for the test cluster"
             DependsOn   = '[File]CreateClusterWitnessDirectory';
         }
+        # TODO: Set permissions for _cluster computer account_
+        #       See also <https://docs.microsoft.com/en-us/windows-server/failover-clustering/manage-cluster-quorum>
+        #       According to that, the share "[m]ust have write permissions enabled for the computer object for the cluster name"
     }
 
     node $AllNodes.Where({$_.Role -in 'WEB','SQL','EDGE'}).NodeName {
@@ -270,6 +273,7 @@ Configuration AoagLab {
             'NET-Framework-Core'
             'NET-Framework-45-Core'
             'Failover-Clustering'
+            'RSAT-Clustering'
         )) {
             WindowsFeature "SqlServer_$($feature.Replace('-',''))" {
                 Ensure               = 'Present';
@@ -342,6 +346,49 @@ Configuration AoagLab {
             Enabled     = 'True';
             Profile     = 'Any';
             LocalPort   = 1433;
+        }
+
+        Script 'CreateCluster' {
+            GetScript = { return @{ Result = "" } }
+            TestScript = {
+                try {
+                    Get-Cluster -Name $using:node.ClusterName -ErrorAction Stop | Out-Null
+                    return $true
+                } catch {
+                    return $false
+                }
+            }
+            SetScript = {
+                $ncParams = @{
+                    Name = $using:node.ClusterName
+                    StaticAddress = $using:node.ClusterAddress
+                    Node = $AllNodes.Where({$_.Role -in 'SQL'}).NodeName
+                    Force = $true
+                }
+                New-Cluster @ncParams
+            }
+            DependsOn = "[WindowsFeature]RSATClustering"
+        }
+
+        Script 'AddClusterWitness' {
+            GetScript = { return @{ Result = "" } }
+            TestScript = {
+                try {
+                    Get-ClusterNode -Cluster $using:node.ClusterName |
+                        Where-Object -Property Name -EQ $env:COMPUTERNAME |
+                        Out-Null
+                    return $true
+                } catch {
+                    return $false
+                }
+            }
+            SetScript = {
+                $allNodesCopy = $using:AllNodes  # Not sure if this is a problem but IntelliSense didn't like it
+                $dcNodeName = $allNodesCopy.Where({$_.Role -in 'DC'}).NodeName | Select-Object -First 1
+                $shareUncPath = "\\${dcNodeName}\$($using:node.ClusterWitnessShare)"
+                Set-ClusterQuorum -Cluster -NodeAndFileShareMajority $shareUncPath
+            }
+            DependsOn = "[WindowsFeature]RSATClustering"
         }
 
     }
