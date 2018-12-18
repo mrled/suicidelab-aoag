@@ -380,7 +380,10 @@ Configuration AoagLab {
             DependsOn = "[Script]InstallSQLServer"
         }
 
-        xFirewall 'EnableSqlPort' {
+        # Default SQL Server port
+        # NOT used for connecting to the normal SQL instance;
+        # used instead to connect to the AOAG listener.
+        xFirewall 'EnableSqlDefaultPort' {
             Name        = 'SQLSERVER';
             DisplayName = 'SQL Server';
             Direction   = 'Inbound';
@@ -389,6 +392,32 @@ Configuration AoagLab {
             Enabled     = 'True';
             Profile     = 'Any';
             LocalPort   = 1433;
+        }
+
+        # Nonstandard port we use for SQL Server
+        # This will connect directly to the SQL Server,
+        # without going through an AOAG listener
+        xFirewall 'EnableSqlCustomPort' {
+            Name        = 'SQLSERVER-CustomPort';
+            DisplayName = 'SQL Server custom listen port';
+            Direction   = 'Inbound';
+            Action      = 'Allow';
+            Ensure      = 'Present';
+            Enabled     = 'True';
+            Profile     = 'Any';
+            LocalPort   = 11433;
+        }
+
+        # This is required for some reason
+        xFirewall 'EnableHadrEndpointPort' {
+            Name        = 'HADREndpoint';
+            DisplayName = 'HADR Endpoint port';
+            Direction   = 'Inbound';
+            Action      = 'Allow';
+            Ensure      = 'Present';
+            Enabled     = 'True';
+            Profile     = 'Any';
+            LocalPort   = 5022;
         }
 
     }
